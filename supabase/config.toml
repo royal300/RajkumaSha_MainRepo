@@ -1,0 +1,10 @@
+project_id = "njqtbektgqcdjbbenzog"
+
+[functions.send-appointment-email]
+verify_jwt = false
+
+[functions.chat]
+verify_jwt = false
+
+[functions.save-to-sheets]
+verify_jwt = false
