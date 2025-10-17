@@ -3,10 +3,15 @@ import { Link } from "react-router-dom";
 import { Scale, Gavel, Users, Briefcase, Award, Clock, Shield } from "lucide-react";
 import ServiceCard from "@/components/ServiceCard";
 import TestimonialCard from "@/components/TestimonialCard";
+import ImageGallery from "@/components/ImageGallery";
 import heroBackground from "@/assets/hero-background.jpg";
 import rajKumarShaPortrait from "@/assets/raj-kumar-sha-portrait.png";
 import courtBuilding from "@/assets/court-building.jpg";
 import rajKumarShaOffice from "@/assets/raj-kumar-sha-office.jpg";
+import image1 from "@/assets/1.jpg";
+import image2 from "@/assets/2.jpg";
+import image3 from "@/assets/3.jpg";
+import image4 from "@/assets/4.jpg";
 
 const Home = () => {
   const [typewriterText, setTypewriterText] = useState("");
@@ -229,6 +234,59 @@ const Home = () => {
                 <TestimonialCard {...testimonial} />
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Gallery Section */}
+      <section className="section-padding bg-background">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-playfair font-bold text-navy mb-4">
+              Legal Gallery
+            </h2>
+            <p className="text-muted-foreground text-lg">
+              Dedicated to providing exceptional legal representation
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="overflow-hidden rounded-lg shadow-lg transition-transform duration-300 hover:scale-105">
+              <div className="relative bg-white p-2 rounded-lg border border-golden/20">
+                <img
+                  src={image1}
+                  alt="Advocate in formal attire signing documents"
+                  className="w-full h-64 object-cover rounded"
+                />
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-lg shadow-lg transition-transform duration-300 hover:scale-105">
+              <div className="relative bg-white p-2 rounded-lg border border-golden/20">
+                <img
+                  src={image2}
+                  alt="Advocate reviewing case files"
+                  className="w-full h-64 object-cover rounded"
+                />
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-lg shadow-lg transition-transform duration-300 hover:scale-105">
+              <div className="relative bg-white p-2 rounded-lg border border-golden/20">
+                <img
+                  src={image3}
+                  alt="Advocate in court robes at Supreme Court"
+                  className="w-full h-64 object-cover rounded"
+                />
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-lg shadow-lg transition-transform duration-300 hover:scale-105">
+              <div className="relative bg-white p-2 rounded-lg border border-golden/20">
+                <img
+                  src={image4}
+                  alt="Advocate in consultation with clients"
+                  className="w-full h-64 object-cover rounded"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </section>
