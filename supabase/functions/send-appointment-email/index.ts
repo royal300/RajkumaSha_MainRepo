@@ -18,6 +18,48 @@ const handler = async (req: Request): Promise<Response> => {
     const appointmentData = await req.json();
     console.log("Received appointment request:", appointmentData);
 
+    // Check if this is a webhook call request
+    const isWebhookCall = appointmentData.webhookTarget === 'n8n' && appointmentData.webhookUrl;
+    
+    if (isWebhookCall) {
+      console.log("Making webhook call to N8N via Supabase function...");
+      
+      try {
+        const webhookResponse = await fetch(appointmentData.webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(appointmentData),
+        });
+
+        if (webhookResponse.ok) {
+          const webhookData = await webhookResponse.json();
+          console.log("✅ N8N webhook called successfully via Supabase:", webhookData);
+          
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: "N8N webhook called successfully via Supabase",
+              webhookResponse: webhookData,
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            }
+          );
+        } else {
+          console.error("N8N webhook responded with error:", webhookResponse.status, webhookResponse.statusText);
+          throw new Error(`N8N webhook error: ${webhookResponse.status} ${webhookResponse.statusText}`);
+        }
+      } catch (webhookError) {
+        console.error("❌ N8N webhook call failed:", webhookError);
+        throw new Error(`Webhook call failed: ${webhookError.message}`);
+      }
+    }
+
+    // Regular email sending logic
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #0a1a3c; border-bottom: 3px solid #d4af37; padding-bottom: 10px;">

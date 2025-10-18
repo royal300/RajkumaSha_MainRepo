@@ -26,11 +26,41 @@ const Contact = () => {
     setIsSubmitting(true);
 
     try {
-      // TODO: Implement email sending
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success("Message sent successfully! We'll get back to you soon.");
-      setFormData({ name: "", email: "", subject: "", message: "" });
+      // Prepare webhook payload
+      const webhookPayload = {
+        ...formData,
+        source: 'contact-form',
+        timestamp: new Date().toISOString(),
+      };
+
+      console.log('Sending contact form data to webhook:', webhookPayload);
+
+      // Call N8N webhook for contact form
+      const webhookUrl = 'https://n8n.royal300.com/webhook-test/contact-form';
+      
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(webhookPayload),
+        mode: 'cors',
+      });
+
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log('Contact form webhook called successfully:', responseData);
+        toast.success("Message sent successfully! We'll get back to you soon.");
+        setFormData({ name: "", email: "", subject: "", message: "" });
+      } else {
+        console.error('Contact form webhook responded with status:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Contact form webhook error response:', errorText);
+        toast.error("Failed to send message. Please try again.");
+      }
     } catch (error) {
+      console.error('Contact form webhook call failed:', error);
       toast.error("Failed to send message. Please try again.");
     } finally {
       setIsSubmitting(false);

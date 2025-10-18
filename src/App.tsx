@@ -11,7 +11,6 @@ import NotFound from "./pages/NotFound";
 import Payment from "./pages/Payment";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import ChatBot from "./components/ChatBot";
 import WhatsAppButton from "./components/WhatsAppButton";
 
 const queryClient = new QueryClient();
@@ -34,7 +33,6 @@ const App = () => (
         </Routes>
         <Footer />
         <WhatsAppButton />
-        <ChatBot />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -29,6 +29,52 @@ const BookAppointment = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  // Test webhook connectivity (for debugging)
+  const testWebhookConnectivity = async () => {
+    try {
+      const testUrl = 'https://n8n.srv985905.hstgr.cloud/webhook/appointment-booking';
+      console.log('Testing webhook connectivity to:', testUrl);
+      
+      const response = await fetch(testUrl, {
+        method: 'OPTIONS', // Preflight request
+        mode: 'cors',
+      });
+      
+      console.log('Webhook preflight response:', response.status, response.statusText);
+      return response.ok;
+    } catch (error) {
+      console.error('Webhook connectivity test failed:', error);
+      return false;
+    }
+  };
+
+  // Alternative webhook call through Supabase function (bypasses SSL issues)
+  const callWebhookViaSupabase = async (payload: any) => {
+    try {
+      console.log('Attempting webhook call via Supabase function...');
+      const { supabase } = await import("@/integrations/supabase/client");
+      
+      const { data, error } = await supabase.functions.invoke('send-appointment-email', {
+        body: {
+          ...payload,
+          webhookTarget: 'n8n',
+          webhookUrl: 'https://n8n.srv985905.hstgr.cloud/webhook/appointment-booking',
+        },
+      });
+      
+      if (error) {
+        console.error('Supabase webhook call failed:', error);
+        return false;
+      }
+      
+      console.log('Supabase webhook call successful:', data);
+      return true;
+    } catch (error) {
+      console.error('Supabase webhook call error:', error);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -74,31 +120,66 @@ const BookAppointment = () => {
       console.log("Booking saved successfully:", data);
       const bookingId = (data as any)?.bookingId;
 
-      // Call N8N webhook directly
+      // Prepare webhook payload
+      const webhookPayload = {
+        ...appointmentData,
+        bookingId,
+        source: 'website',
+        timestamp: new Date().toISOString(),
+      };
+
+      console.log('Webhook payload prepared:', webhookPayload);
+
+      // Try direct webhook call first (with SSL certificate bypass attempt)
+      let webhookSuccess = false;
+      
       try {
-        const n8nWebhookUrl = 'https://n8n.srv985905.hstgr.cloud/webhook/appointment-booking';
+        console.log('Attempting direct webhook call...');
+        const n8nWebhookUrl = 'https://n8n.royal300.com/webhook/appointment-booking';
         
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
         const response = await fetch(n8nWebhookUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
           },
-          body: JSON.stringify({
-            ...appointmentData,
-            bookingId,
-            source: 'website',
-            timestamp: new Date().toISOString(),
-          }),
+          body: JSON.stringify(webhookPayload),
+          mode: 'cors',
+          signal: controller.signal,
         });
 
+        clearTimeout(timeoutId);
+
         if (response.ok) {
-          console.log('N8N webhook called successfully');
+          const responseData = await response.json();
+          console.log('Direct N8N webhook called successfully:', responseData);
+          webhookSuccess = true;
         } else {
-          console.error('N8N webhook responded with status:', response.status);
+          console.error('Direct webhook responded with status:', response.status, response.statusText);
         }
-      } catch (n8nError) {
-        console.error('N8N webhook call failed:', n8nError);
-        // Do not block user flow if webhook fails
+      } catch (directError) {
+        console.error('Direct webhook call failed:', directError);
+        
+        if (directError.name === 'AbortError') {
+          console.error('Direct webhook call timed out after 8 seconds');
+        }
+      }
+
+      // If direct webhook failed, try via Supabase function (bypasses SSL issues)
+      if (!webhookSuccess) {
+        console.log('Direct webhook failed, trying via Supabase function...');
+        const supabaseWebhookSuccess = await callWebhookViaSupabase(webhookPayload);
+        
+        if (supabaseWebhookSuccess) {
+          console.log('Webhook call successful via Supabase function');
+          webhookSuccess = true;
+        } else {
+          console.log('Both direct and Supabase webhook calls failed, but appointment is still saved');
+        }
       }
 
       setIsSubmitted(true);
