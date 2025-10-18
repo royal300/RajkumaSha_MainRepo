@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Copy, CheckCircle2, QrCode } from "lucide-react";
+import { Copy, CheckCircle2 } from "lucide-react";
+import paymentQR from "../assets/payment_qr.jpeg";
 
 const Payment = () => {
   const [copied, setCopied] = useState(false);
 
-  const upiId = "advrajkumarsha@upi"; // TODO: replace with real UPI ID if available
+  const upiId = "rajsha505@oksbi";
 
   const handleCopy = async () => {
     try {
@@ -25,9 +26,12 @@ const Payment = () => {
 
         {/* QR Section */}
         <section className="bg-navy-dark/60 border border-golden/20 rounded-xl p-6 sm:p-10 flex flex-col items-center justify-center">
-          <div className="w-full max-w-sm aspect-square bg-black/20 rounded-lg border border-golden/30 flex items-center justify-center">
-            {/* Image placeholder for QR */}
-            <QrCode className="w-24 h-24 text-golden" />
+          <div className="w-full max-w-sm aspect-square bg-white rounded-lg border border-golden/30 flex items-center justify-center overflow-hidden">
+            <img 
+              src={paymentQR} 
+              alt="Payment QR Code" 
+              className="w-full h-full object-contain"
+            />
           </div>
           <p className="text-gray-300 text-sm mt-4 text-center">
             Scan the QR with your UPI app to pay securely
