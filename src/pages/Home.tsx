@@ -59,7 +59,7 @@ const Home = () => {
       name: "Amit Kumar",
       case: "Property Dispute",
       rating: 5,
-      content: "Advocate Saha handled my complex property case with utmost professionalism. His expertise and dedication resulted in a favorable outcome. Highly recommended!",
+      content: "Advocate Rajkumar Sha handled my complex property case with utmost professionalism. His expertise and dedication resulted in a favorable outcome. Highly recommended!",
     },
     {
       name: "Priya Sharma",

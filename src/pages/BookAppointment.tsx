@@ -20,7 +20,6 @@ const BookAppointment = () => {
   const [date, setDate] = useState<Date>();
   const [formData, setFormData] = useState({
     fullName: "",
-    email: "",
     mobile: "",
     caseType: "",
     timeSlot: "",
@@ -83,7 +82,7 @@ const BookAppointment = () => {
       return;
     }
 
-    if (!formData.fullName || !formData.email || !formData.mobile || !formData.caseType) {
+    if (!formData.fullName || !formData.mobile || !formData.caseType) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -95,7 +94,6 @@ const BookAppointment = () => {
       
       const appointmentData = {
         fullName: formData.fullName,
-        email: formData.email,
         mobile: formData.mobile,
         caseType: formData.caseType,
         timeSlot: formData.timeSlot,
@@ -182,14 +180,120 @@ const BookAppointment = () => {
         }
       }
 
+      // Send WhatsApp message with appointment details - Multiple fallback mechanisms
+      const sendWhatsAppMessage = () => {
+        const whatsappMessage = `I want to book appointment. Details:
+Name: ${appointmentData.fullName}
+Mobile: ${appointmentData.mobile}
+Case Type: ${appointmentData.caseType}
+Appointment Date: ${appointmentData.appointmentDate}
+Case Details: ${appointmentData.caseDetails}
+Booking ID: ${bookingId}`;
+
+        const whatsappUrl = `https://wa.me/918013763607?text=${encodeURIComponent(whatsappMessage)}`;
+        
+        console.log('Attempting to send WhatsApp message...');
+        
+        // Method 1: Direct window.open with specific parameters
+        try {
+          const newWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer,width=800,height=600');
+          if (newWindow && !newWindow.closed) {
+            console.log('WhatsApp opened successfully via window.open');
+            return true;
+          }
+        } catch (error) {
+          console.log('Method 1 failed:', error);
+        }
+        
+        // Method 2: Create temporary link and click
+        try {
+          const link = document.createElement('a');
+          link.href = whatsappUrl;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(() => document.body.removeChild(link), 100);
+          console.log('WhatsApp opened successfully via temporary link');
+          return true;
+        } catch (error) {
+          console.log('Method 2 failed:', error);
+        }
+        
+        // Method 3: Use iframe approach
+        try {
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          iframe.src = whatsappUrl;
+          document.body.appendChild(iframe);
+          setTimeout(() => document.body.removeChild(iframe), 1000);
+          console.log('WhatsApp opened successfully via iframe');
+          return true;
+        } catch (error) {
+          console.log('Method 3 failed:', error);
+        }
+        
+        // Method 4: Use location.href as last resort
+        try {
+          window.location.href = whatsappUrl;
+          console.log('WhatsApp opened successfully via location.href');
+          return true;
+        } catch (error) {
+          console.log('Method 4 failed:', error);
+        }
+        
+        return false;
+      };
+
+      // Try multiple times with different delays and methods
+      let whatsappSuccess = false;
+      
+      // Immediate attempt
+      whatsappSuccess = sendWhatsAppMessage();
+      
+      // If first attempt fails, try again with different delays
+      if (!whatsappSuccess) {
+        setTimeout(() => {
+          whatsappSuccess = sendWhatsAppMessage();
+          
+          // If still fails, try one more time after 300ms
+          if (!whatsappSuccess) {
+            setTimeout(() => {
+              whatsappSuccess = sendWhatsAppMessage();
+              
+              // Final attempt after 800ms
+              if (!whatsappSuccess) {
+                setTimeout(() => {
+                  sendWhatsAppMessage();
+                }, 800);
+              }
+            }, 300);
+          }
+        }, 150);
+      }
+
+      // Store WhatsApp URL in localStorage as backup
+      const whatsappMessage = `I want to book appointment. Details:
+Name: ${appointmentData.fullName}
+Mobile: ${appointmentData.mobile}
+Case Type: ${appointmentData.caseType}
+Appointment Date: ${appointmentData.appointmentDate}
+Case Details: ${appointmentData.caseDetails}
+Booking ID: ${bookingId}`;
+
+      const whatsappUrl = `https://wa.me/918013763607?text=${encodeURIComponent(whatsappMessage)}`;
+      localStorage.setItem('whatsapp_backup_url', whatsappUrl);
+      
+      console.log('WhatsApp backup URL stored in localStorage');
+
       setIsSubmitted(true);
-      toast.success("Thank you! Partial booking received. Check your email for payment to confirm your appointment.");
+      toast.success("Thank you for your appointment booking!");
 
       // Reset form
       setTimeout(() => {
         setFormData({
           fullName: "",
-          email: "",
           mobile: "",
           caseType: "",
           timeSlot: "",
@@ -215,7 +319,7 @@ const BookAppointment = () => {
             Thank You!
           </h1>
           <p className="text-muted-foreground text-lg">
-            Partial booking received. Check your email for payment to confirm your appointment.
+            Your appointment has been booked successfully!
           </p>
         </div>
       </div>
@@ -235,6 +339,9 @@ const BookAppointment = () => {
           <div className="mt-4 inline-block px-6 py-3 bg-golden/10 border-2 border-golden rounded-lg">
             <p className="text-golden font-bold text-2xl">
               Consultation Fee: ₹400/-
+            </p>
+            <p className="text-golden font-semibold text-lg mt-2">
+              Consultation Time: 7pm - 9pm
             </p>
           </div>
         </div>
@@ -283,22 +390,6 @@ const BookAppointment = () => {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="email" className="text-navy font-semibold">
-                  Email Address *
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  placeholder="your.email@example.com"
-                  required
-                  className="mt-2"
-                />
-              </div>
 
               <div>
                 <Label htmlFor="mobile" className="text-navy font-semibold">
@@ -346,29 +437,6 @@ const BookAppointment = () => {
             </div>
           </div>
 
-          {/* Time Slot Selection */}
-          <div className="mb-8">
-            <Label className="text-navy font-semibold mb-3 block">
-              Preferred Time Slot
-            </Label>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-              {["12 PM", "1 PM", "2 PM", "3 PM", "4 PM", "5 PM"].map((time) => (
-                <button
-                  key={time}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, timeSlot: time })}
-                  className={cn(
-                    "px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium",
-                    formData.timeSlot === time
-                      ? "border-golden bg-golden/10 text-golden"
-                      : "border-muted hover:border-golden/50"
-                  )}
-                >
-                  {time}
-                </button>
-              ))}
-            </div>
-          </div>
 
           {/* Case Details */}
           <div className="mb-8">
