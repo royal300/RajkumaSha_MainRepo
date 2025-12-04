@@ -26,42 +26,81 @@ const Contact = () => {
     setIsSubmitting(true);
 
     try {
-      // Prepare webhook payload
-      const webhookPayload = {
-        ...formData,
-        source: 'contact-form',
-        timestamp: new Date().toISOString(),
-      };
+      // Construct WhatsApp message
+      const whatsappMessage = `New Contact Inquiry:
+Name: ${formData.name}
+Email: ${formData.email}
+Subject: ${formData.subject || "N/A"}
+Message: ${formData.message}`;
 
-      console.log('Sending contact form data to webhook:', webhookPayload);
+      const whatsappUrl = `https://wa.me/918013763607?text=${encodeURIComponent(whatsappMessage)}`;
 
-      // Call N8N webhook for contact form
-      const webhookUrl = 'https://n8n.royal300.com/webhook-test/contact-form';
-      
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(webhookPayload),
-        mode: 'cors',
-      });
+      console.log('Attempting to send WhatsApp message...');
 
-      if (response.ok) {
-        const responseData = await response.json();
-        console.log('Contact form webhook called successfully:', responseData);
-        toast.success("Message sent successfully! We'll get back to you soon.");
-        setFormData({ name: "", email: "", subject: "", message: "" });
-      } else {
-        console.error('Contact form webhook responded with status:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Contact form webhook error response:', errorText);
-        toast.error("Failed to send message. Please try again.");
+      // Method 1: Direct window.open with specific parameters
+      try {
+        const newWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer,width=800,height=600');
+        if (newWindow && !newWindow.closed) {
+          console.log('WhatsApp opened successfully via window.open');
+          // Success handling
+          toast.success("Opening WhatsApp to send your message...");
+          setFormData({ name: "", email: "", subject: "", message: "" });
+          setIsSubmitting(false);
+          return;
+        }
+      } catch (error) {
+        console.log('Method 1 failed:', error);
       }
+
+      // Method 2: Create temporary link and click
+      try {
+        const link = document.createElement('a');
+        link.href = whatsappUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => document.body.removeChild(link), 100);
+        console.log('WhatsApp opened successfully via temporary link');
+        toast.success("Opening WhatsApp to send your message...");
+        setFormData({ name: "", email: "", subject: "", message: "" });
+        setIsSubmitting(false);
+        return;
+      } catch (error) {
+        console.log('Method 2 failed:', error);
+      }
+
+      // Method 3: Use iframe approach
+      try {
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = whatsappUrl;
+        document.body.appendChild(iframe);
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+        console.log('WhatsApp opened successfully via iframe');
+        toast.success("Opening WhatsApp to send your message...");
+        setFormData({ name: "", email: "", subject: "", message: "" });
+        setIsSubmitting(false);
+        return;
+      } catch (error) {
+        console.log('Method 3 failed:', error);
+      }
+
+      // Method 4: Use location.href as last resort
+      try {
+        window.location.href = whatsappUrl;
+        console.log('WhatsApp opened successfully via location.href');
+        toast.success("Opening WhatsApp to send your message...");
+        setFormData({ name: "", email: "", subject: "", message: "" });
+      } catch (error) {
+        console.log('Method 4 failed:', error);
+        toast.error("Failed to open WhatsApp. Please try again.");
+      }
+
     } catch (error) {
-      console.error('Contact form webhook call failed:', error);
-      toast.error("Failed to send message. Please try again.");
+      console.error('Error sending message:', error);
+      toast.error("An error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -234,7 +273,7 @@ const Contact = () => {
                 disabled={isSubmitting}
                 className="w-full btn-golden text-lg py-6"
               >
-                {isSubmitting ? "Sending..." : "Send Message"}
+                {isSubmitting ? "Sending..." : "Send Message via WhatsApp"}
               </Button>
             </form>
           </div>
