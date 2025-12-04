@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/select";
 import { CalendarIcon, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const BookAppointment = () => {
@@ -27,52 +26,6 @@ const BookAppointment = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-
-  // Test webhook connectivity (for debugging)
-  const testWebhookConnectivity = async () => {
-    try {
-      const testUrl = 'https://n8n.srv985905.hstgr.cloud/webhook/appointment-booking';
-      console.log('Testing webhook connectivity to:', testUrl);
-      
-      const response = await fetch(testUrl, {
-        method: 'OPTIONS', // Preflight request
-        mode: 'cors',
-      });
-      
-      console.log('Webhook preflight response:', response.status, response.statusText);
-      return response.ok;
-    } catch (error) {
-      console.error('Webhook connectivity test failed:', error);
-      return false;
-    }
-  };
-
-  // Alternative webhook call through Supabase function (bypasses SSL issues)
-  const callWebhookViaSupabase = async (payload: any) => {
-    try {
-      console.log('Attempting webhook call via Supabase function...');
-      const { supabase } = await import("@/integrations/supabase/client");
-      
-      const { data, error } = await supabase.functions.invoke('send-appointment-email', {
-        body: {
-          ...payload,
-          webhookTarget: 'n8n',
-          webhookUrl: 'https://n8n.srv985905.hstgr.cloud/webhook/appointment-booking',
-        },
-      });
-      
-      if (error) {
-        console.error('Supabase webhook call failed:', error);
-        return false;
-      }
-      
-      console.log('Supabase webhook call successful:', data);
-      return true;
-    } catch (error) {
-      console.error('Supabase webhook call error:', error);
-      return false;
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,8 +43,6 @@ const BookAppointment = () => {
     setIsSubmitting(true);
 
     try {
-      const { supabase } = await import("@/integrations/supabase/client");
-      
       const appointmentData = {
         fullName: formData.fullName,
         mobile: formData.mobile,
@@ -106,80 +57,6 @@ const BookAppointment = () => {
         }),
       };
 
-      const { data, error } = await supabase.functions.invoke('save-to-sheets', {
-        body: appointmentData,
-      });
-
-      if (error) {
-        console.error("Booking error:", error);
-        throw error;
-      }
-
-      console.log("Booking saved successfully:", data);
-      const bookingId = (data as any)?.bookingId;
-
-      // Prepare webhook payload
-      const webhookPayload = {
-        ...appointmentData,
-        bookingId,
-        source: 'website',
-        timestamp: new Date().toISOString(),
-      };
-
-      console.log('Webhook payload prepared:', webhookPayload);
-
-      // Try direct webhook call first (with SSL certificate bypass attempt)
-      let webhookSuccess = false;
-      
-      try {
-        console.log('Attempting direct webhook call...');
-        const n8nWebhookUrl = 'https://n8n.royal300.com/webhook/appointment-booking';
-        
-        // Create AbortController for timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-
-        const response = await fetch(n8nWebhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify(webhookPayload),
-          mode: 'cors',
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const responseData = await response.json();
-          console.log('Direct N8N webhook called successfully:', responseData);
-          webhookSuccess = true;
-        } else {
-          console.error('Direct webhook responded with status:', response.status, response.statusText);
-        }
-      } catch (directError) {
-        console.error('Direct webhook call failed:', directError);
-        
-        if (directError.name === 'AbortError') {
-          console.error('Direct webhook call timed out after 8 seconds');
-        }
-      }
-
-      // If direct webhook failed, try via Supabase function (bypasses SSL issues)
-      if (!webhookSuccess) {
-        console.log('Direct webhook failed, trying via Supabase function...');
-        const supabaseWebhookSuccess = await callWebhookViaSupabase(webhookPayload);
-        
-        if (supabaseWebhookSuccess) {
-          console.log('Webhook call successful via Supabase function');
-          webhookSuccess = true;
-        } else {
-          console.log('Both direct and Supabase webhook calls failed, but appointment is still saved');
-        }
-      }
-
       // Send WhatsApp message with appointment details - Multiple fallback mechanisms
       const sendWhatsAppMessage = () => {
         const whatsappMessage = `I want to book appointment. Details:
@@ -187,8 +64,7 @@ Name: ${appointmentData.fullName}
 Mobile: ${appointmentData.mobile}
 Case Type: ${appointmentData.caseType}
 Appointment Date: ${appointmentData.appointmentDate}
-Case Details: ${appointmentData.caseDetails}
-Booking ID: ${bookingId}`;
+Case Details: ${appointmentData.caseDetails}`;
 
         const whatsappUrl = `https://wa.me/918013763607?text=${encodeURIComponent(whatsappMessage)}`;
         
@@ -273,22 +149,8 @@ Booking ID: ${bookingId}`;
         }, 150);
       }
 
-      // Store WhatsApp URL in localStorage as backup
-      const whatsappMessage = `I want to book appointment. Details:
-Name: ${appointmentData.fullName}
-Mobile: ${appointmentData.mobile}
-Case Type: ${appointmentData.caseType}
-Appointment Date: ${appointmentData.appointmentDate}
-Case Details: ${appointmentData.caseDetails}
-Booking ID: ${bookingId}`;
-
-      const whatsappUrl = `https://wa.me/918013763607?text=${encodeURIComponent(whatsappMessage)}`;
-      localStorage.setItem('whatsapp_backup_url', whatsappUrl);
-      
-      console.log('WhatsApp backup URL stored in localStorage');
-
       setIsSubmitted(true);
-      toast.success("Thank you for your appointment booking!");
+      toast.success("Opening WhatsApp to send your appointment details...");
 
       // Reset form
       setTimeout(() => {
@@ -304,7 +166,7 @@ Booking ID: ${bookingId}`;
       }, 5000);
     } catch (error) {
       console.error("Appointment booking error:", error);
-      toast.error("Failed to book appointment. Please try again.");
+      toast.error("Failed to process request. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -319,7 +181,7 @@ Booking ID: ${bookingId}`;
             Thank You!
           </h1>
           <p className="text-muted-foreground text-lg">
-            Your appointment has been booked successfully!
+            Please complete the booking by sending the message on WhatsApp.
           </p>
         </div>
       </div>
@@ -461,7 +323,7 @@ Booking ID: ${bookingId}`;
             disabled={isSubmitting}
             className="w-full btn-golden text-lg py-6"
           >
-            {isSubmitting ? "Booking..." : "Book Appointment"}
+            {isSubmitting ? "Processing..." : "Book Appointment via WhatsApp"}
           </Button>
         </form>
       </div>
